@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>WE Installer • GitHub Authorization</title>
+	<style>
+		body {
+			font-family: system-ui;
+			margin: 24px;
+			line-height: 1.4;
+			background-color: #F6F8FA;
+		}
+
+		.card {
+			background-color: white;
+			width: min(720px, calc(100vw - 48px));
+			border: 1px solid #ddd;
+			border-radius: 12px;
+			padding: 20px;
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			box-shadow: 0px 1px 1px 0px #1f23280f, 0px 1px 3px 0px #1f23280f;
+		}
+
+		h2 {
+			margin: 0 0 8px 0;
+			font-size: 22px;
+		}
+
+		p {
+			margin: 8px 0;
+		}
+
+		hr {
+			border: none;
+			border-top: 1px solid #eee;
+			margin: 16px 0;
+		}
+
+		.code {
+			font-size: 28px;
+			letter-spacing: 2px;
+			font-weight: 700;
+			padding: 12px 14px;
+			border: 1px dashed #888;
+			display: inline-block;
+			border-radius: 10px;
+			user-select: all;
+			background: #fff;
+		}
+
+		button,
+		a.btn {
+			display: inline-block;
+			margin-right: 10px;
+			margin-top: 12px;
+			padding: 10px 14px;
+			border-radius: 10px;
+			border: 1px solid #333;
+			background: #111;
+			color: #fff;
+			text-decoration: none;
+			cursor: pointer;
+			font-size: 16px;
+			line-height: 1.4;
+		}
+
+		button.secondary {
+			background: #fff;
+			color: #111;
+		}
+
+		button:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		.muted {
+			color: #666;
+			margin-top: 8px;
+		}
+
+		.status {
+			margin-top: 18px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			background: #f6f6f6;
+			border: 1px solid #eee;
+		}
+
+		.section {
+			margin-top: 14px;
+		}
+
+		.badge {
+			display: inline-block;
+			padding: 2px 8px;
+			border-radius: 999px;
+			font-size: 12px;
+			border: 1px solid #e5e7eb;
+			background: #fafafa;
+			color: #444;
+			vertical-align: middle;
+			margin-left: 8px;
+		}
+
+		.path {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+			font-size: 13px;
+			background: #f8fafc;
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			padding: 10px 12px;
+			margin-top: 10px;
+			white-space: pre-wrap;
+			word-break: break-word;
+		}
+
+		.row {
+			display: flex;
+			gap: 10px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="card">
+		<h2 id="title">WE Installer</h2>
+
+		<!-- AUTH SECTION -->
+		<div id="authSection" class="section">
+			<p>Open GitHub and enter this code:</p>
+			<div class="code" id="code">{{USER_CODE}}</div>
+
+			<div class="row">
+				<button id="copy" class="secondary" type="button">Copy code</button>
+				<a class="btn" id="githubBtn" href="{{VERIFICATION_URI}}" target="_blank" rel="noreferrer">Open GitHub</a>
+			</div>
+		</div>
+
+		<!-- INSTALL LOCATION SECTION -->
+		<div id="installSection" class="section" style="display:none;">
+			<p>
+				This package will be installed in the exact same directory where the command is running:
+			</p>
+			<div class="path" id="cwdLine">Loading current directory…</div>
+
+			<div class="muted" id="installChoiceMsg"></div>
+
+			<div class="row">
+				<button id="acceptCwdBtn" class="secondary" type="button">Accept</button>
+				<button id="chooseManualBtn" class="secondary" type="button">Choose manually</button>
+			</div>
+
+			<p class="muted">
+				If you choose <b>Choose manually</b>, for security reasons you must type the folder path in the terminal.
+			</p>
+		</div>
+
+		<!-- STATUS (ALWAYS VISIBLE) -->
+		<div class="status" id="status">Status: Waiting...</div>
+		<div class="muted" id="whoami"></div>
+		<div class="muted" id="keepOpenMsg">Do not close this browser window. This installer will continue using it.</div>
+	</div>
+
+	<script>
+		// -----------------------------
+		// Elements
+		// -----------------------------
+		const titleEl = document.getElementById("title");
+
+		const authSection = document.getElementById("authSection");
+		const installSection = document.getElementById("installSection");
+
+		const codeEl = document.getElementById("code");
+		const copyBtn = document.getElementById("copy");
+		const githubBtn = document.getElementById("githubBtn");
+
+		const statusEl = document.getElementById("status");
+		const whoamiEl = document.getElementById("whoami");
+		const keepOpenEl = document.getElementById("keepOpenMsg");
+
+		const cwdLineEl = document.getElementById("cwdLine");
+		const installChoiceMsgEl = document.getElementById("installChoiceMsg");
+		const acceptBtn = document.getElementById("acceptCwdBtn");
+		const manualBtn = document.getElementById("chooseManualBtn");
+
+		// -----------------------------
+		// Helpers
+		// -----------------------------
+		function show(el) {
+			if (el) el.style.display = "";
+		}
+
+		function hide(el) {
+			if (el) el.style.display = "none";
+		}
+
+		function setTitle(phase) {
+			if (!titleEl) return;
+			switch (phase) {
+				case "auth":
+					titleEl.innerText = "GitHub Authorization";
+					break;
+				case "install":
+					titleEl.innerText = "Choose Install Location";
+					break;
+				case "download":
+					titleEl.innerText = "Downloading WoniruEngine";
+					break;
+				case "npm":
+					titleEl.innerText = "Installing Dependencies";
+					break;
+				case "wizard":
+					titleEl.innerText = "Launching Setup Wizard";
+					break;
+				default:
+					titleEl.innerText = "WE Installer";
+			}
+		}
+
+		function applyVisibility(phase) {
+			// Always show status & keep-open message
+			show(statusEl);
+			show(keepOpenEl);
+			show(whoamiEl);
+
+			// Default: auth view
+			if (phase === "auth" || !phase) {
+				show(authSection);
+				hide(installSection);
+				return;
+			}
+
+			// Install choice view: show install section; hide auth section
+			hide(authSection);
+			show(installSection);
+
+			// Optional: once user has chosen, you can disable buttons (keeps UI clear)
+			// We'll handle in loadContext().
+		}
+
+		async function safeJsonFetch(url, opts) {
+			try {
+				const r = await fetch(url, Object.assign({
+					cache: "no-store"
+				}, opts || {}));
+				const j = await r.json();
+				return {
+					ok: true,
+					json: j
+				};
+			} catch (e) {
+				return {
+					ok: false,
+					error: e
+				};
+			}
+		}
+
+		// -----------------------------
+		// Copy Code
+		// -----------------------------
+		const initialCode = (codeEl && codeEl.innerText) ? codeEl.innerText : "";
+		if (copyBtn && initialCode) {
+			copyBtn.addEventListener("click", async () => {
+				try {
+					await navigator.clipboard.writeText(initialCode);
+					copyBtn.innerText = "Copied!";
+					setTimeout(() => copyBtn.innerText = "Copy code", 1500);
+				} catch {
+					alert("Clipboard blocked. Select code and press Ctrl+C.");
+				}
+			});
+		}
+
+		// -----------------------------
+		// Status polling
+		// Server returns: { phase, status, userLogin }
+		// phases: "auth" | "install" | "download" | "npm" | "wizard"
+		// -----------------------------
+		let lastPhase = null;
+
+		async function pollStatus() {
+			const res = await safeJsonFetch("/status");
+			if (res.ok) {
+				const j = res.json || {};
+
+				if (statusEl) statusEl.innerText = "Status: " + (j.status || "…");
+				if (keepOpenEl) keepOpenEl.innerText = "Do not close this browser window. This installer will continue using it.";
+
+				if (whoamiEl) {
+					if (j.userLogin) whoamiEl.innerText = "Authenticated as: " + j.userLogin;
+					else whoamiEl.innerText = "";
+				}
+
+				const phase = j.phase || "auth";
+				setTitle(phase);
+				applyVisibility(phase);
+
+				// Redirect when wizard is ready
+				if (phase && phase !== lastPhase) {
+					lastPhase = phase;
+					if (phase === "configure") {
+						window.location.href = "/configure?ts=" + Date.now();
+						return;
+					}
+				}
+			}
+
+			setTimeout(pollStatus, 1200);
+		}
+
+		// -----------------------------
+		// Context polling + install choice
+		// Server returns: { cwd, installChoice }
+		// installChoice: "accept" | "manual" | null
+		// -----------------------------
+		async function loadContext() {
+			const res = await safeJsonFetch("/context");
+			if (!res.ok) return;
+
+			const j = res.json || {};
+			const cwd = j.cwd || "";
+			const choice = j.installChoice || null;
+
+			if (cwdLineEl) cwdLineEl.innerText = cwd;
+
+			if (installChoiceMsgEl) {
+				if (choice === "accept") {
+					installChoiceMsgEl.innerText = "Accepted. Return to the terminal. Do not close this window.";
+				} else if (choice === "manual") {
+					installChoiceMsgEl.innerText = "Manual selection chosen. For security, enter the directory path in the terminal. Do not close this window.";
+				} else {
+					installChoiceMsgEl.innerText = "Click Accept to continue with this directory, or Choose manually to enter a path in the terminal.";
+				}
+			}
+
+			// Disable buttons once selection is made (prevents double-click confusion)
+			if (acceptBtn) acceptBtn.disabled = (choice !== null);
+			if (manualBtn) manualBtn.disabled = (choice !== null);
+		}
+
+		async function postChoice(choice) {
+			await safeJsonFetch("/install-choice", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify({
+					choice
+				})
+			});
+			await loadContext();
+		}
+
+		if (acceptBtn) acceptBtn.addEventListener("click", () => postChoice("accept"));
+		if (manualBtn) manualBtn.addEventListener("click", () => postChoice("manual"));
+
+		// Initial render
+		setTitle("auth");
+		applyVisibility("auth");
+
+		// Start loops
+		pollStatus();
+		loadContext();
+		setInterval(loadContext, 1200);
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>WE Installer • Configure</title>
+	<style>
+		body {
+			font-family: system-ui;
+			margin: 24px;
+			line-height: 1.4;
+			background-color: #F6F8FA;
+		}
+
+		.card {
+			background-color: white;
+			width: min(760px, calc(100vw - 48px));
+			border: 1px solid #ddd;
+			border-radius: 12px;
+			padding: 20px;
+			margin: 0 auto;
+			box-shadow: 0px 1px 1px 0px #1f23280f, 0px 1px 3px 0px #1f23280f;
+		}
+
+		h2 {
+			margin: 0 0 8px 0;
+			font-size: 22px;
+		}
+
+		h3 {
+			margin: 0;
+		}
+
+		.muted {
+			color: #666;
+			margin-top: 8px;
+		}
+
+		.steps {
+			display: flex;
+			gap: 10px;
+			margin: 12px 0 18px;
+			flex-wrap: wrap;
+		}
+
+		.step {
+			border: 1px solid #e5e7eb;
+			background: #fafafa;
+			border-radius: 999px;
+			padding: 6px 10px;
+			font-size: 13px;
+			color: #333;
+		}
+
+		.step.active {
+			background: #111;
+			color: #fff;
+			border-color: #111;
+		}
+
+		label {
+			display: block;
+			margin-top: 14px;
+			font-weight: 600;
+		}
+
+		input[type="text"],
+		input[type="password"] {
+			width: 100%;
+			box-sizing: border-box;
+			margin-top: 8px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			border: 1px solid #cfd6dd;
+			font-size: 14px;
+		}
+
+		.row {
+			display: flex;
+			gap: 10px;
+			align-items: center;
+			flex-wrap: wrap;
+			margin-top: 12px;
+		}
+
+		.checkboxRow {
+			margin-top: 12px;
+			display: flex;
+			gap: 10px;
+			align-items: center;
+		}
+
+		button {
+			display: inline-block;
+			padding: 10px 14px;
+			border-radius: 10px;
+			border: 1px solid #333;
+			background: #111;
+			color: #fff;
+			cursor: pointer;
+			font-size: 16px;
+			line-height: 1.4;
+		}
+
+		button.secondary {
+			background: #fff;
+			color: #111;
+		}
+
+		button:disabled {
+			opacity: 0.6;
+			cursor: not-allowed;
+		}
+
+		.statusBox {
+			margin-top: 18px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			background: #f6f6f6;
+			border: 1px solid #eee;
+		}
+
+		.error {
+			color: #b42318;
+			margin-top: 10px;
+		}
+
+		.ok {
+			color: #067647;
+			margin-top: 10px;
+		}
+
+		.path,
+		.codebox {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+			font-size: 13px;
+			background: #f8fafc;
+			border: 1px solid #e5e7eb;
+			border-radius: 10px;
+			padding: 10px 12px;
+			margin-top: 10px;
+			white-space: pre-wrap;
+			word-break: break-word;
+		}
+
+		.section {
+			margin-top: 16px;
+		}
+
+		.pill {
+			display: inline-block;
+			padding: 4px 10px;
+			border-radius: 999px;
+			border: 1px solid #e5e7eb;
+			background: #fafafa;
+			font-size: 12px;
+			margin-top: 8px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="card">
+		<h2 id="pageTitle">Configure WoniruEngine</h2>
+		<div class="muted" id="stepMeta">Step 1 of 3</div>
+
+		<div class="steps">
+			<div class="step" id="s1">1) Setup Redis</div>
+			<div class="step" id="s2">2) Connect Database</div>
+			<div class="step" id="s3">3) Admin User</div>
+		</div>
+
+		<div class="statusBox" id="globalStatus">Status: Loading…</div>
+
+		<div class="section">
+			<div class="muted">Project directory</div>
+			<div class="path" id="installDir">Loading…</div>
+		</div>
+
+		<!-- STEP 1 -->
+		<div id="step1" class="section">
+			<h3>Step 1: Setup Redis</h3>
+			<div class="muted">
+				Redis is expected at <b>127.0.0.1:6379</b>.
+			</div>
+
+			<div class="checkboxRow">
+				<input id="existingRedis" type="checkbox" />
+				<label for="existingRedis" style="margin:0; font-weight:600;">I already have Redis
+					installed/configured</label>
+			</div>
+
+			<label for="redisAdminKey">Redis admin key</label>
+			<input id="redisAdminKey" type="password" placeholder="Enter admin key (min 8 chars)"
+				autocomplete="new-password" />
+			<div class="muted">
+				If you checked “already configured”, we’ll only <b>test connection</b> as <b>admin</b>.
+				Otherwise, we’ll <b>build & start Redis via Docker</b> and configure ACL users.
+			</div>
+
+			<div class="row">
+				<button id="saveRedisBtn" type="button">Save & Continue</button>
+				<button id="reloadBtn" class="secondary" type="button">Reload</button>
+			</div>
+
+			<div id="msg1"></div>
+		</div>
+
+		<!-- STEP 2 -->
+		<div id="step2" class="section" style="display:none;">
+			<h3>Step 2: Connect Database</h3>
+			<div class="muted">Enter database connection details. The installer will apply the schema.</div>
+
+			<label for="dbHost">DB Host</label>
+			<input id="dbHost" type="text" placeholder="e.g. 127.0.0.1 or db.mycompany.local" />
+
+			<label for="dbUser">DB User</label>
+			<input id="dbUser" type="text" placeholder="e.g. root / we_user" />
+
+			<label for="dbPassword">DB Password</label>
+			<input id="dbPassword" type="password" placeholder="Password" autocomplete="new-password" />
+
+			<label for="dbName">DB Name</label>
+			<input id="dbName" type="text" placeholder="e.g. woniru_engine" />
+
+			<div class="row">
+				<button id="applyDbBtn" type="button">Save & Continue</button>
+				<button id="dbReloadBtn" class="secondary" type="button">Reload</button>
+			</div>
+
+			<div id="msg2"></div>
+		</div>
+
+		<!-- STEP 3 -->
+		<div id="step3" class="section" style="display:none;">
+			<h3>Step 3: Admin User</h3>
+			<div class="muted">
+				WE is ready. Use the following credentials to login for the first time.
+				You can change them after logging in.
+			</div>
+
+			<div class="pill"><b>Username:</b> admin@we.com</div>
+			<div class="pill" style="margin-left:8px;"><b>Password:</b> weAdmin</div>
+
+			<div class="section">
+				<div class="muted">Run these commands in the terminal (from the project directory):</div>
+
+				<div class="codebox" id="cmd1">npm run dev --redisAdminKey=...</div>
+				<div class="codebox" id="cmd2">npm run recalculate:user-permissions</div>
+
+				<div class="muted">
+					1) Starts the server. <br />
+					2) Recalculates all user permissions if required.
+				</div>
+			</div>
+
+			<div class="row">
+				<button id="finishBtn" type="button">Finish</button>
+				<button id="copyCmdsBtn" class="secondary" type="button">Copy commands</button>
+			</div>
+
+			<div id="msg3"></div>
+			<div class="muted">This window will close when you click Finish.</div>
+		</div>
+	</div>
+
+	<script>
+		const globalStatusEl = document.getElementById("globalStatus");
+		const installDirEl = document.getElementById("installDir");
+		const stepMetaEl = document.getElementById("stepMeta");
+		const pageTitleEl = document.getElementById("pageTitle");
+
+		const step1El = document.getElementById("step1");
+		const step2El = document.getElementById("step2");
+		const step3El = document.getElementById("step3");
+
+		const s1 = document.getElementById("s1");
+		const s2 = document.getElementById("s2");
+		const s3 = document.getElementById("s3");
+
+		// Step 1
+		const existingRedisEl = document.getElementById("existingRedis");
+		const adminKeyEl = document.getElementById("redisAdminKey");
+		const saveRedisBtn = document.getElementById("saveRedisBtn");
+		const reloadBtn = document.getElementById("reloadBtn");
+		const msg1El = document.getElementById("msg1");
+
+		// Step 2
+		const dbHostEl = document.getElementById("dbHost");
+		const dbUserEl = document.getElementById("dbUser");
+		const dbPasswordEl = document.getElementById("dbPassword");
+		const dbNameEl = document.getElementById("dbName");
+		const applyDbBtn = document.getElementById("applyDbBtn");
+		const dbReloadBtn = document.getElementById("dbReloadBtn");
+		const msg2El = document.getElementById("msg2");
+
+		// Step 3
+		const cmd1El = document.getElementById("cmd1");
+		const cmd2El = document.getElementById("cmd2");
+		const finishBtn = document.getElementById("finishBtn");
+		const copyCmdsBtn = document.getElementById("copyCmdsBtn");
+		const msg3El = document.getElementById("msg3");
+
+		function setMsg(el, type, text) {
+			if (!el) return;
+			el.className = type;
+			el.innerText = text || "";
+		}
+
+		async function safeJson(url, opts) {
+			try {
+				const r = await fetch(url, Object.assign({ cache: "no-store" }, opts || {}));
+				const j = await r.json();
+				return { ok: r.ok, json: j };
+			} catch (e) {
+				return { ok: false, json: { error: "Network error" } };
+			}
+		}
+
+		function renderStep(step) {
+			s1.className = "step" + (step === 1 ? " active" : "");
+			s2.className = "step" + (step === 2 ? " active" : "");
+			s3.className = "step" + (step === 3 ? " active" : "");
+
+			stepMetaEl.innerText = `Step ${step} of 3`;
+
+			step1El.style.display = (step === 1) ? "" : "none";
+			step2El.style.display = (step === 2) ? "" : "none";
+			step3El.style.display = (step === 3) ? "" : "none";
+
+			if (step === 1) pageTitleEl.innerText = "Configure WoniruEngine";
+			if (step === 2) pageTitleEl.innerText = "Configure • Database";
+			if (step === 3) pageTitleEl.innerText = "Finish • Admin User";
+		}
+
+		async function pollGlobalStatus() {
+			const res = await safeJson("/status");
+			if (res.ok) globalStatusEl.innerText = "Status: " + (res.json.status || "…");
+			setTimeout(pollGlobalStatus, 1200);
+		}
+
+		function refreshCommands(redisAdminKey) {
+			const safeKey = redisAdminKey || "";
+			cmd1El.innerText = `npm run dev --redisAdminKey=${safeKey}`;
+			cmd2El.innerText = `npm run recalculate:user-permissions`;
+		}
+
+		async function loadState() {
+			setMsg(msg1El, "", "");
+			setMsg(msg2El, "", "");
+			setMsg(msg3El, "", "");
+
+			const res = await safeJson("/configure/state");
+			if (!res.ok) return;
+
+			const st = res.json || {};
+			const step = st.step || 1;
+			const redis = st.redis || {};
+			const db = st.db || {};
+
+			installDirEl.innerText = st.installDir || "(unknown)";
+
+			// Step 1 fields
+			existingRedisEl.checked = !!redis.existing;
+			adminKeyEl.value = redis.adminKey || "";
+
+			// Step 2 fields
+			if (dbHostEl) dbHostEl.value = db.host || "";
+			if (dbUserEl) dbUserEl.value = db.user || "";
+			if (dbPasswordEl) dbPasswordEl.value = db.password || "";
+			if (dbNameEl) dbNameEl.value = db.name || "";
+
+			// Step 3 commands
+			refreshCommands(redis.adminKey || "");
+
+			renderStep(step);
+		}
+
+		async function applyRedisStep() {
+			setMsg(msg1El, "", "");
+			saveRedisBtn.disabled = true;
+
+			const payload = {
+				existing: !!existingRedisEl.checked,
+				adminKey: adminKeyEl.value || ""
+			};
+
+			const res = await safeJson("/configure/redis/apply", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload)
+			});
+
+			if (res.ok && res.json && res.json.ok) {
+				setMsg(msg1El, "ok", "Redis step completed ✅ Moving to Step 2…");
+				await loadState();
+			} else {
+				setMsg(msg1El, "error", (res.json && res.json.error) ? res.json.error : "Redis step failed.");
+			}
+
+			saveRedisBtn.disabled = false;
+		}
+
+		async function applyDbStep() {
+			setMsg(msg2El, "", "");
+			applyDbBtn.disabled = true;
+
+			const payload = {
+				host: dbHostEl.value || "",
+				user: dbUserEl.value || "",
+				password: dbPasswordEl.value || "",
+				name: dbNameEl.value || ""
+			};
+
+			const res = await safeJson("/configure/db/apply", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload)
+			});
+
+			if (res.ok && res.json && res.json.ok) {
+				setMsg(msg2El, "ok", "Database step completed ✅ Moving to Step 3…");
+				await loadState();
+			} else {
+				setMsg(msg2El, "error", (res.json && res.json.error) ? res.json.error : "Database step failed.");
+			}
+
+			applyDbBtn.disabled = false;
+		}
+
+		function notifyDone() {
+			// Reliable even during tab close
+			/* try {
+				const blob = new Blob([JSON.stringify({ ok: true })], { type: "application/json" });
+				navigator.sendBeacon("/configure/done", blob);
+			} catch {
+				// best effort fallback
+				fetch("/configure/done", { method: "POST" }).catch(() => { });
+			} */
+
+			fetch("/configure/done", { method: "POST" }).catch(() => { });
+			close();
+		}
+
+		async function finish() {
+			setMsg(msg3El, "", "");
+			notifyDone();
+
+			setMsg(msg3El, "ok", "Closing… ✅");
+
+			// Try to close the tab. (Works if opened by script)
+			setTimeout(() => {
+				window.close();
+			}, 150);
+		}
+
+		async function copyCommands() {
+			try {
+				const text = cmd1El.innerText + "\n" + cmd2El.innerText;
+				await navigator.clipboard.writeText(text);
+				setMsg(msg3El, "ok", "Commands copied ✅");
+			} catch {
+				setMsg(msg3El, "error", "Clipboard blocked. Copy manually.");
+			}
+		}
+
+		// Hook buttons
+		saveRedisBtn.addEventListener("click", applyRedisStep);
+		reloadBtn.addEventListener("click", loadState);
+
+		if (applyDbBtn) applyDbBtn.addEventListener("click", applyDbStep);
+		if (dbReloadBtn) dbReloadBtn.addEventListener("click", loadState);
+
+		if (finishBtn) finishBtn.addEventListener("click", finish);
+		if (copyCmdsBtn) copyCmdsBtn.addEventListener("click", copyCommands);
+
+		// If user closes tab manually, still signal the installer to exit
+		window.addEventListener("beforeunload", () => {
+			notifyDone();
+		});
+
+		pollGlobalStatus();
+		loadState();
+	</script>
+</body>
+
+</html>
