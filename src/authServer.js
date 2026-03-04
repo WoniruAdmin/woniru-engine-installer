@@ -367,7 +367,6 @@ function startAuthServer({ verificationUri, userCode }) {
 						user,
 						password,
 						// NOTE: no database here on purpose
-						// Enable multi statements only when we apply schema below
 						multipleStatements: false
 					});
 
@@ -397,6 +396,13 @@ function startAuthServer({ verificationUri, userCode }) {
 					});
 
 					await dbConn.end();
+
+					fs.writeFileSync(path.join(state.installDir, "meta.json"), JSON.stringify({
+						databaseType: "mysql",
+						databaseHost: host,
+						databasePort: "3306",
+						databaseMeta: dbName
+					}, null, 2));
 
 					// 5) advance to step 3
 					state.configure.step = 3;

@@ -1,6 +1,6 @@
 {
-	"name": "we-installer",
-	"version": "0.1.0",
+	"name": "@woniru/we-installer",
+	"version": "0.1.1",
 	"private": false,
 	"type": "commonjs",
 	"bin": {
